@@ -1,0 +1,41 @@
+# XAMPP / Local Environment
+xampp/
+htdocs/
+
+# Environment / Secrets
+.env
+.env.*
+!.env.example
+
+# PHP
+vendor/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# Operating System
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary / Backup Files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Logs
+*.log
+logs/
+
+# Database dumps
+*.sql
+*.sql.gz

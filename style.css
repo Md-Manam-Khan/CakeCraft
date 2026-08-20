@@ -1,0 +1,75 @@
+*
+{
+    margin: 0;
+    padding: 0;
+}
+body 
+{
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    color: rgba(231, 109, 22, 0.467);
+    background-image: url("cakes-bg.png");
+}
+.wlcm 
+{
+    background-color: rgba(228, 125, 23, 0.86);
+    color: white;
+    text-align: center;
+    padding: 60px 20px;
+}
+.wlcm h1 
+{
+    font-size: 42px;
+    margin-bottom: 10px;
+}
+.wlcm p 
+{
+    font-size: 18px;
+}
+.form 
+{
+    width: 450px;
+    margin: 40px auto;
+    padding: 30px;
+    border-radius: 12px;
+    background-color: white;
+}
+.form h2 
+{
+    text-align: center;
+    margin-bottom: 20px;
+    color: rgba(228, 125, 23, 0.86);
+}
+label 
+{
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+input[type="text"],
+input[type="tel"],
+textarea 
+{
+    width: 435px;
+    padding: 10px;
+    border: 1px solid rgb(223, 171, 108);
+    border-radius: 6px;
+    font-size: 15px;
+    font-family: inherit;
+}
+button 
+{
+    width: 450px;
+    margin-top: 25px;
+    padding: 12px;
+    background-color: rgba(228, 125, 23, 0.86);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+}
+button:hover 
+{
+    background-color: rgba(187, 101, 15, 0.86);
+}
