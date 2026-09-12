@@ -1,0 +1,559 @@
+*
+{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body
+{
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    color: rgba(231, 109, 22, 0.86);
+    min-height: 100vh;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+body:not(.signinpg):not(.signuppg):not(.dashpage):not(.adminpage)
+{
+    background-image: url("cakes-bg.png");
+}
+body.signinpg
+{
+    background-image: url("signin-bg.jpg");
+}
+body.signuppg
+{
+    background-image: url("signup-bg.jpg");
+}
+body.dashpage
+{
+    background-image: url("page1.png");
+}
+body.adminpage
+{
+    background-image: url("admin.png");
+}
+.box1
+{
+    width: 90%;
+    max-width: 750px;
+    padding: 60px 40px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.94);
+    border-radius: 18px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+}
+.box1 h1
+{
+    font-size: 48px;
+    margin-bottom: 15px;
+    color: rgba(228, 125, 23, 0.95);
+}
+.box1 p
+{
+    font-size: 18px;
+    line-height: 1.6;
+    color: #555;
+    margin-bottom: 35px;
+}
+.btnrow
+{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 25px;
+}
+.mainbtn
+{
+    display: inline-block;
+    width: 180px;
+    padding: 14px 20px;
+    background-color: rgba(228, 125, 23, 0.95);
+    color: white;
+    text-decoration: none;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 6px 0 rgba(170, 90, 10, 0.95);
+    transition: all 0.15s ease;
+}
+.mainbtn:hover
+{
+    background-color: rgba(187, 101, 15, 0.95);
+    transform: translateY(-3px);
+    box-shadow:  0 9px 0 rgba(140, 70, 5, 0.95);
+}
+.mainbtn:active
+{
+    transform: translateY(5px) scaleX(0.92);
+    margin-left: 8px;
+    margin-right: 8px;
+    box-shadow: 0 1px 0 rgba(140, 70, 5, 0.95);
+}
+.adminbtn
+{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 180px;
+    margin-top: 28px;
+    padding: 12px 20px;
+    background: linear-gradient(145deg, #2c2c2c, #151515);
+    color: rgba(228, 125, 23, 0.95);
+    text-decoration: none;
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(228, 125, 23, 0.5);
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.55), 0 0 0 rgba(228, 125, 23, 0);
+    transition: all 0.2s ease;
+}
+.adminbtn:hover
+{
+    border-color: rgba(228, 125, 23, 0.95);
+    color: rgba(240, 150, 40, 1);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 0 rgba(0, 0, 0, 0.55), 0 0 16px rgba(228, 125, 23, 0.4);
+}
+.adminbtn:active
+{
+    transform: translateY(4px) scaleX(0.94);
+    margin-left: 8px;
+    margin-right: 8px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+}
+.pagewrap
+{
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 15px;
+}
+.form
+{
+    width: 100%;
+    max-width: 450px;
+    padding: 30px;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+}
+.form.bigform
+{
+    max-width: 600px;
+}
+.form h2
+{
+    text-align: center;
+    margin-bottom: 10px;
+    color: rgba(228, 125, 23, 0.95);
+    font-size: 30px;
+}
+.formtext
+{
+    text-align: center;
+    color: #666;
+    font-size: 15px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+label
+{
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #444;
+}
+input,
+textarea
+{
+    width: 100%;
+    padding: 11px;
+    border: 1px solid rgb(223, 171, 108);
+    border-radius: 6px;
+    outline: none;
+    font-size: 15px;
+    font-family: inherit;
+    background-color: white;
+}
+input:focus,
+textarea:focus
+{
+    border: 2px solid rgba(228, 125, 23, 0.86);
+}
+input[type="number"]
+{
+    -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button
+{
+    -webkit-appearance: none;
+    margin: 0;
+}
+.form button,
+.addbtn
+{
+    width: 100%;
+    margin-top: 25px;
+    padding: 13px;
+    background-color: rgba(228, 125, 23, 0.95);
+    color: white;
+    border: none;
+    border-radius: 7px;
+    font-size: 17px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(170, 90, 10, 0.95);
+    transition: all 0.15s ease;
+}
+.form button:hover,
+.addbtn:hover
+{
+    background-color: rgba(187, 101, 15, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 7px 0 rgba(140, 70, 5, 0.95);
+}
+.form button:active,
+.addbtn:active
+{
+    transform: translateY(4px) scaleX(0.94);
+    margin-left: 8px;
+    margin-right: 8px;
+    width: calc(100% - 16px);
+    box-shadow: 0 1px 0 rgba(140, 70, 5, 0.95);
+}
+.swtext
+{
+    text-align: center;
+    margin-top: 25px;
+    color: #555;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.swtext a
+{
+    color: rgba(228, 125, 23, 0.95);
+    font-weight: bold;
+    text-decoration: none;
+}
+.swtext a:hover
+{
+    text-decoration: underline;
+}
+.backlink
+{
+    display: block;
+    text-align: center;
+    margin-top: 15px;
+    color: #777;
+    text-decoration: none;
+    font-size: 14px;
+}
+.backlink:hover
+{
+    color: rgba(228, 125, 23, 0.95);
+}
+.msgbox
+{
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    background-color: rgba(228, 125, 23, 0.15);
+    color: rgba(228, 125, 23, 0.95);
+    font-size: 14px;
+    font-weight: bold;
+}
+.devbtn
+{
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    padding: 8px 14px;
+    background-color: rgba(34, 139, 58, 0.95);
+    color: white;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 6px;
+    box-shadow: 0 4px 0 rgba(20, 95, 40, 0.95);
+    transition: all 0.15s ease;
+    z-index: 999;
+}
+.devbtn:hover
+{
+    background-color: rgba(28, 120, 50, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 rgba(20, 95, 40, 0.95);
+}
+.devbtn:active
+{
+    transform: translateY(3px) scaleX(0.94);
+    margin-left: 6px;
+    margin-right: 6px;
+    box-shadow: 0 1px 0 rgba(20, 95, 40, 0.95);
+}
+.logoutbtn
+{
+    left: auto;
+    right: 18px;
+    background-color: rgba(200, 60, 60, 0.95);
+    box-shadow: 0 4px 0 rgba(140, 30, 30, 0.95);
+}
+.logoutbtn:hover
+{
+    background-color: rgba(180, 45, 45, 0.95);
+    box-shadow: 0 6px 0 rgba(140, 30, 30, 0.95);
+}
+.logoutbtn:active
+{
+    box-shadow: 0 1px 0 rgba(140, 30, 30, 0.95);
+}
+.dashwrap
+{
+    width: 90%;
+    max-width: 900px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+.dashtitle
+{
+    font-size: 40px;
+    color: white;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    margin-bottom: 10px;
+}
+.dashsub
+{
+    font-size: 17px;
+    color: white;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    margin-bottom: 40px;
+}
+.boxrow
+{
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+.box2
+{
+    flex: 1;
+    min-width: 260px;
+    max-width: 380px;
+    padding: 35px 25px;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    text-decoration: none;
+    color: #444;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}
+.box2:hover
+{
+    transform: translateY(-6px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+}
+.box2 h3
+{
+    color: rgba(228, 125, 23, 0.95);
+    font-size: 22px;
+    margin-bottom: 12px;
+}
+.box2 p
+{
+    font-size: 14px;
+    line-height: 1.5;
+    color: #666;
+}
+.adminwrap
+{
+    width: 92%;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 100px 0 60px;
+}
+.adminboxrow
+{
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.adminbox
+{
+    flex: 1;
+    min-width: 320px;
+    max-width: 460px;
+    padding: 30px;
+    background-color: rgba(255, 255, 255, 0.96);
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+.adminbox h2
+{
+    color: rgba(228, 125, 23, 0.95);
+    margin-bottom: 18px;
+    text-align: center;
+}
+.smallform
+{
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+.itemlist
+{
+    max-height: 260px;
+    overflow-y: auto;
+}
+.itemline
+{
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background-color: #fdf3ea;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #555;
+}
+.qtytxt
+{
+    color: rgba(228, 125, 23, 0.95);
+}
+.ordercard
+{
+    padding: 14px;
+    border-radius: 8px;
+    background-color: #fdf3ea;
+    margin-bottom: 12px;
+}
+.ordercard p
+{
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 6px;
+}
+.orderbtns
+{
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+.orderbtns form
+{
+    flex: 1;
+}
+.okbtn,
+.nobtn
+{
+    width: 100%;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 13px;
+}
+.okbtn
+{
+    background-color: rgba(34, 139, 58, 0.95);
+}
+.nobtn
+{
+    background-color: rgba(200, 60, 60, 0.95);
+}
+.statustxt
+{
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+}
+.status-pending
+{
+    background-color: rgba(228, 125, 23, 0.95);
+}
+.status-accepted
+{
+    background-color: rgba(34, 139, 58, 0.95);
+}
+.status-declined
+{
+    background-color: rgba(200, 60, 60, 0.95);
+}
+@media (max-width: 600px)
+{
+    .box1
+    {
+        padding: 40px 20px;
+    }
+    .box1 h1
+    {
+        font-size: 34px;
+    }
+    .box1 p
+    {
+        font-size: 16px;
+    }
+    .btnrow
+    {
+        flex-direction: column;
+        gap: 18px;
+    }
+    .mainbtn
+    {
+        width: 80%;
+    }
+    .adminbtn
+    {
+        width: 80%;
+    }
+    .form
+    {
+        padding: 25px 20px;
+    }
+    .form h2
+    {
+        font-size: 26px;
+    }
+    .devbtn
+    {
+        top: 12px;
+        right: 12px;
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+    .boxrow
+    {
+        flex-direction: column;
+        align-items: center;
+    }
+    .adminboxrow
+    {
+        flex-direction: column;
+        align-items: center;
+    }
+}
