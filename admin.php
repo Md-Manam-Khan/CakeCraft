@@ -7,6 +7,7 @@ if (!isset($_SESSION['admin_logged_in']))
 }
 $msg1 = "";
 $msg2 = "";
+$msg3 = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] === 'add_item') 
     {
     $item_name = trim($_POST['item_name']);
@@ -40,16 +41,57 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && ($_POST['
     if ($_POST['action'] === 'accept') 
         {
         $stat = 'accepted';
+        $update = $conn->prepare("UPDATE orders SET status = ? WHERE id = ?");
+        $update->bind_param("si", $stat, $order_id);
+        $update->execute();
+        $update->close();
+        $msg2 = "Order #$order_id has been accepted.";
     } 
     else 
         {
         $stat = 'declined';
+        $update = $conn->prepare("UPDATE orders SET status = ? WHERE id = ?");
+        $update->bind_param("si", $stat, $order_id);
+        $update->execute();
+        $update->close();
+        $msg2 = "Order #$order_id has been declined.";
     }
-    $update = $conn->prepare("UPDATE orders SET status = ? WHERE id = ?");
-    $update->bind_param("si", $stat, $order_id);
-    $update->execute();
-    $update->close();
-    $msg2 = "Order #$order_id has been $stat.";
+}
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] === 'add_rider') 
+    {
+    $rname = trim($_POST['rname']);
+    $rpass = $_POST['rpass'];
+    if (empty($rname) || empty($rpass)) 
+        {
+        $msg3 = "Rider ID name and password are required.";
+    } 
+    else 
+        {
+        $check = $conn->prepare("SELECT id FROM riders WHERE id_name = ?");
+        $check->bind_param("s", $rname);
+        $check->execute();
+        $check->store_result();
+        if ($check->num_rows > 0) 
+            {
+            $msg3 = "That rider ID name already exists.";
+        } 
+        else 
+            {
+            $hashpass = password_hash($rpass, PASSWORD_DEFAULT);
+            $insert = $conn->prepare("INSERT INTO riders (id_name, password) VALUES (?, ?)");
+            $insert->bind_param("ss", $rname, $hashpass);
+            $insert->execute();
+            $insert->close();
+            $msg3 = "Rider '$rname' has been added.";
+        }
+        $check->close();
+    }
+}
+$riders_res = $conn->query("SELECT id, id_name FROM riders ORDER BY id_name ASC");
+$riderlist = array();
+while ($r = $riders_res->fetch_assoc()) 
+    {
+    $riderlist[] = $r;
 }
 $items_res = $conn->query("SELECT * FROM items ORDER BY item_name ASC");
 $orders_res = $conn->query("
@@ -136,6 +178,36 @@ $orders_res = $conn->query("
                         </div>
                     <?php } ?>
                 <?php } ?>
+            </div>
+            <div class="adminbox">
+                <h2>Riders</h2>
+                <?php if (!empty($msg3)) 
+                    { ?>
+                    <p class="msgbox"><?php echo htmlspecialchars($msg3); ?></p>
+                <?php } ?>
+                <form action="admin.php" method="POST" class="smallform">
+                    <input type="hidden" name="action" value="add_rider">
+                    <label for="rname">Rider ID Name</label>
+                    <input type="text" id="rname" name="rname" placeholder="Choose a rider ID name" required>
+                    <label for="rpass">Rider Password</label>
+                    <input type="text" id="rpass" name="rpass" placeholder="Set a password for the rider" required>
+                    <button type="submit" class="addbtn">Add Rider</button>
+                </form>
+                <div class="itemlist">
+                    <?php if (count($riderlist) === 0) 
+                        { ?>
+                        <p class="formtext">No riders added yet.</p>
+                    <?php } 
+                    else 
+                    { ?>
+                        <?php foreach ($riderlist as $r) 
+                            { ?>
+                            <div class="itemline">
+                                <span><?php echo htmlspecialchars($r['id_name']); ?></span>
+                            </div>
+                        <?php } ?>
+                    <?php } ?>
+                </div>
             </div>
         </div>
     </div>

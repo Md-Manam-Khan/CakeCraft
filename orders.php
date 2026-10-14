@@ -35,6 +35,22 @@ $orders = $stmt->get_result();
                         <span class="statustxt status-<?php echo strtolower($order['status']); ?>">
                             <?php echo ucfirst($order['status']); ?>
                         </span>
+                        <?php
+                        $stmt2 = $conn->prepare("SELECT update_text, created_at FROM order_updates WHERE order_id = ? ORDER BY id ASC");
+                        $stmt2->bind_param("i", $order['id']);
+                        $stmt2->execute();
+                        $ups = $stmt2->get_result();
+                        if ($ups->num_rows > 0) 
+                            { ?>
+                            <div class="updatebox">
+                                <p class="updatetitle">Rider Updates</p>
+                                <?php while ($up = $ups->fetch_assoc()) 
+                                    { ?>
+                                    <p class="updateline"><?php echo htmlspecialchars($up['update_text']); ?> <span class="updatetime"><?php echo date("d M, h:i A", strtotime($up['created_at'])); ?></span></p>
+                                <?php } ?>
+                            </div>
+                        <?php } 
+                        $stmt2->close(); ?>
                     </div>
                 <?php } ?>
             <?php } ?>

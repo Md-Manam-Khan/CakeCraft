@@ -14,7 +14,7 @@ body
     background-repeat: no-repeat;
     background-attachment: fixed;
 }
-body:not(.signinpg):not(.signuppg):not(.dashpage):not(.adminpage)
+body:not(.signinpg):not(.signuppg):not(.dashpage):not(.adminpage):not(.riderpage)
 {
     background-image: url("cakes-bg.png");
 }
@@ -33,6 +33,10 @@ body.dashpage
 body.adminpage
 {
     background-image: url("admin.png");
+}
+body.riderpage
+{
+    background-image: url("rider-bg.png");
 }
 .box1
 {
@@ -503,6 +507,81 @@ input[type="number"]::-webkit-inner-spin-button
 .status-declined
 {
     background-color: rgba(200, 60, 60, 0.95);
+}
+.status-delivered
+{
+    background-color: rgba(30, 110, 180, 0.95);
+}
+.ordercard select
+{
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 8px;
+    border: 1px solid rgb(223, 171, 108);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    background-color: white;
+}
+.riderbox
+{
+    max-width: 700px;
+}
+.updatebox
+{
+    margin-top: 10px;
+    padding: 10px 12px;
+    background-color: white;
+    border: 1px solid #f0d9c2;
+    border-radius: 8px;
+}
+.updatebox .updatetitle
+{
+    font-size: 13px;
+    font-weight: bold;
+    color: rgba(228, 125, 23, 0.95);
+    margin-bottom: 6px;
+}
+.updatebox .updateline
+{
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 4px;
+}
+.updatetime
+{
+    margin-left: 6px;
+    font-size: 11px;
+    color: #999;
+}
+.updateform input
+{
+    margin-top: 10px;
+}
+.updatebtns
+{
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+.updatebtns button
+{
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 13px;
+}
+.updatebtns .okbtn
+{
+    background-color: rgba(34, 139, 58, 0.95);
+}
+.updatebtns .donebtn
+{
+    background-color: rgba(228, 125, 23, 0.95);
 }
 @media (max-width: 600px)
 {
