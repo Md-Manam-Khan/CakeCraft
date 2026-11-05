@@ -41,20 +41,58 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && ($_POST['
     if ($_POST['action'] === 'accept') 
         {
         $stat = 'accepted';
-        $update = $conn->prepare("UPDATE orders SET status = ? WHERE id = ?");
+        $update = $conn->prepare("UPDATE orders SET status = ? WHERE id = ? AND status = 'pending'");
         $update->bind_param("si", $stat, $order_id);
         $update->execute();
         $update->close();
-        $msg2 = "Order #$order_id has been accepted.";
+        $msg2 = "Order #$order_id has been accepted. Now assign it to a rider.";
     } 
     else 
         {
         $stat = 'declined';
-        $update = $conn->prepare("UPDATE orders SET status = ? WHERE id = ?");
+        $update = $conn->prepare("UPDATE orders SET status = ? WHERE id = ? AND status = 'pending'");
         $update->bind_param("si", $stat, $order_id);
         $update->execute();
         $update->close();
         $msg2 = "Order #$order_id has been declined.";
+    }
+}
+$msg9 = "";
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] === 'assign_rider') 
+    {
+    $assign_rider = (int) $_POST['assign_rider_id'];
+    $assign_order = (int) $_POST['assign_order_id'];
+    if ($assign_rider <= 0 || $assign_order <= 0) 
+        {
+        $msg9 = "Select a rider and an order first.";
+    } 
+    else 
+        {
+        $check = $conn->prepare("SELECT id_name FROM riders WHERE id = ?");
+        $check->bind_param("i", $assign_rider);
+        $check->execute();
+        $found = $check->get_result();
+        if ($found->num_rows === 0) 
+            {
+            $msg9 = "That rider does not exist anymore.";
+        } 
+        else 
+            {
+            $rrow = $found->fetch_assoc();
+            $update = $conn->prepare("UPDATE orders SET rider_id = ?, rider_status = 'pending' WHERE id = ? AND status = 'accepted' AND (rider_status IS NULL OR rider_status <> 'accepted')");
+            $update->bind_param("ii", $assign_rider, $assign_order);
+            $update->execute();
+            if ($update->affected_rows > 0) 
+                {
+                $msg9 = "Order #$assign_order has been assigned to " . $rrow['id_name'] . ". Waiting for the rider to accept.";
+            } 
+            else 
+                {
+                $msg9 = "Order #$assign_order cannot be assigned right now.";
+            }
+            $update->close();
+        }
+        $check->close();
     }
 }
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] === 'add_rider') 
@@ -89,6 +127,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
 }
 $msg4 = "";
 $msg5 = "";
+$msg6 = "";
+$msg7 = "";
 $openbox = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] === 'add_cake') 
     {
@@ -146,11 +186,129 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
     }
     $check->close();
 }
-$cakes_res = $conn->query("SELECT id, cake_name FROM cakes ORDER BY cake_name ASC");
+$msg8 = "";
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] === 'edit_price') 
+    {
+    $openbox = "editprice";
+    $target = trim($_POST['price_target']);
+    $newprice = trim($_POST['new_price']);
+    $parts = explode(":", $target);
+    $kinds = array(
+        'cake' => array('cakes', 'cake_name'),
+        'filling' => array('fillings', 'filling_name'),
+        'size' => array('sizes', 'size_name')
+    );
+    if (count($parts) !== 2 || !isset($kinds[$parts[0]]) || (int) $parts[1] <= 0) 
+        {
+        $msg8 = "Please choose a flavor, filling or size first.";
+    } 
+    else if ($newprice === "" || !is_numeric($newprice) || $newprice < 0) 
+        {
+        $msg8 = "Please type a valid price (0 or more).";
+    } 
+    else if ($newprice > 99999999) 
+        {
+        $msg8 = "That price is too big.";
+    } 
+    else 
+        {
+        $tbl = $kinds[$parts[0]][0];
+        $col = $kinds[$parts[0]][1];
+        $pid = (int) $parts[1];
+        $pval = round((float) $newprice, 2);
+        $check = $conn->prepare("SELECT $col AS nm FROM $tbl WHERE id = ?");
+        $check->bind_param("i", $pid);
+        $check->execute();
+        $found = $check->get_result();
+        if ($found->num_rows > 0) 
+            {
+            $row = $found->fetch_assoc();
+            $update = $conn->prepare("UPDATE $tbl SET price = ? WHERE id = ?");
+            $update->bind_param("di", $pval, $pid);
+            $update->execute();
+            $update->close();
+            $msg8 = "Price of '" . $row['nm'] . "' is now " . tk($pval) . ".";
+        } 
+        else 
+            {
+            $msg8 = "That item is not available anymore.";
+        }
+        $check->close();
+    }
+}
+$cakes_res = $conn->query("SELECT id, cake_name, price FROM cakes ORDER BY cake_name ASC");
 $cakelist = array();
 while ($c = $cakes_res->fetch_assoc()) 
     {
     $cakelist[] = $c;
+}
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] === 'add_filling') 
+    {
+    $openbox = "addfilling";
+    $filling_name = trim($_POST['filling_name']);
+    if (empty($filling_name)) 
+        {
+        $msg6 = "Please write the filling's name.";
+    } 
+    else if (strlen($filling_name) > 100) 
+        {
+        $msg6 = "That name is too long (100 letters max).";
+    } 
+    else 
+        {
+        $check = $conn->prepare("SELECT id FROM fillings WHERE filling_name = ?");
+        $check->bind_param("s", $filling_name);
+        $check->execute();
+        $check->store_result();
+        if ($check->num_rows > 0) 
+            {
+            $msg6 = "'$filling_name' is already in the fillings list.";
+        } 
+        else 
+            {
+            $insert = $conn->prepare("INSERT INTO fillings (filling_name) VALUES (?)");
+            $insert->bind_param("s", $filling_name);
+            $insert->execute();
+            $insert->close();
+            $msg6 = "'$filling_name' has been added to the fillings.";
+        }
+        $check->close();
+    }
+}
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] === 'remove_filling') 
+    {
+    $openbox = "removefilling";
+    $filling_id = (int) $_POST['filling_id'];
+    $check = $conn->prepare("SELECT filling_name FROM fillings WHERE id = ?");
+    $check->bind_param("i", $filling_id);
+    $check->execute();
+    $found = $check->get_result();
+    if ($found->num_rows > 0) 
+        {
+        $row = $found->fetch_assoc();
+        $delete = $conn->prepare("DELETE FROM fillings WHERE id = ?");
+        $delete->bind_param("i", $filling_id);
+        $delete->execute();
+        $delete->close();
+        $msg7 = "'" . $row['filling_name'] . "' has been removed from the fillings.";
+    } 
+    else 
+        {
+        $msg7 = "That filling is not in the list anymore.";
+    }
+    $check->close();
+}
+$fillings_res = $conn->query("SELECT id, filling_name, price FROM fillings ORDER BY filling_name ASC");
+$fillinglist = array();
+while ($fl = $fillings_res->fetch_assoc()) 
+    {
+    $fillinglist[] = $fl;
+}
+$sizes_res = $conn->query("SELECT id, size_name, price FROM sizes ORDER BY id ASC");
+$sizelist = array();
+while ($z = $sizes_res->fetch_assoc()) 
+    {
+    $sizelist[] = $z;
 }
 $riders_res = $conn->query("SELECT id, id_name FROM riders ORDER BY id_name ASC");
 $riderlist = array();
@@ -160,11 +318,31 @@ while ($r = $riders_res->fetch_assoc())
 }
 $items_res = $conn->query("SELECT * FROM items ORDER BY item_name ASC");
 $orders_res = $conn->query("
-    SELECT orders.id, orders.cake_details, orders.created_at, users.full_name
+    SELECT orders.id, orders.cake_details, orders.address, orders.total_price, orders.created_at, users.full_name
     FROM orders
     JOIN users ON orders.user_id = users.id
     WHERE orders.status = 'pending'
     ORDER BY orders.created_at ASC
+");
+$assignable_res = $conn->query("
+    SELECT orders.id, orders.rider_status, riders.id_name AS rider_name
+    FROM orders
+    LEFT JOIN riders ON orders.rider_id = riders.id
+    WHERE orders.status = 'accepted' AND (orders.rider_status IS NULL OR orders.rider_status <> 'accepted')
+    ORDER BY orders.id ASC
+");
+$assignable = array();
+while ($as = $assignable_res->fetch_assoc()) 
+    {
+    $assignable[] = $as;
+}
+$assigned_res = $conn->query("
+    SELECT orders.id, orders.status, orders.rider_status, riders.id_name AS rider_name
+    FROM orders
+    JOIN riders ON orders.rider_id = riders.id
+    WHERE orders.rider_status IS NOT NULL
+    ORDER BY orders.id DESC
+    LIMIT 15
 ");
 ?>
 <!DOCTYPE html>
@@ -182,6 +360,9 @@ $orders_res = $conn->query("
         <div class="editdrop" id="editdrop">
             <button type="button" class="dropitem" onclick="showbox('add')">Add Cake</button>
             <button type="button" class="dropitem" onclick="showbox('remove')">Remove Cake</button>
+            <button type="button" class="dropitem" onclick="showbox('addfilling')">Add Filling</button>
+            <button type="button" class="dropitem" onclick="showbox('removefilling')">Remove Filling</button>
+            <button type="button" class="dropitem" onclick="showbox('editprice')">Edit Price</button>
         </div>
     </div>
     <div class="menuoverlay" id="addbox" onclick="if (event.target === this) closeboxes()">
@@ -228,6 +409,90 @@ $orders_res = $conn->query("
                     <?php } ?>
                 <?php } ?>
             </div>
+        </div>
+    </div>
+    <div class="menuoverlay" id="addfillingbox" onclick="if (event.target === this) closeboxes()">
+        <div class="menubox">
+            <button type="button" class="closebtn" onclick="closeboxes()">&#10005;</button>
+            <h2>Add Filling</h2>
+            <?php if (!empty($msg6)) 
+                { ?>
+                <p class="msgbox"><?php echo htmlspecialchars($msg6); ?></p>
+            <?php } ?>
+            <form action="admin.php" method="POST">
+                <input type="hidden" name="action" value="add_filling">
+                <label for="filling_name">Filling Name</label>
+                <input type="text" id="filling_name" name="filling_name" maxlength="100" placeholder="e.g. Caramel" required>
+                <button type="submit" class="addbtn">Add to Fillings</button>
+            </form>
+        </div>
+    </div>
+    <div class="menuoverlay" id="removefillingbox" onclick="if (event.target === this) closeboxes()">
+        <div class="menubox">
+            <button type="button" class="closebtn" onclick="closeboxes()">&#10005;</button>
+            <h2>Remove Filling</h2>
+            <?php if (!empty($msg7)) 
+                { ?>
+                <p class="msgbox"><?php echo htmlspecialchars($msg7); ?></p>
+            <?php } ?>
+            <div class="itemlist">
+                <?php if (count($fillinglist) === 0) 
+                    { ?>
+                    <p class="formtext">There are no fillings right now.</p>
+                <?php } 
+                else 
+                { ?>
+                    <?php foreach ($fillinglist as $fl) 
+                        { ?>
+                        <div class="menuline">
+                            <span><?php echo htmlspecialchars($fl['filling_name']); ?></span>
+                            <form action="admin.php" method="POST">
+                                <input type="hidden" name="action" value="remove_filling">
+                                <input type="hidden" name="filling_id" value="<?php echo $fl['id']; ?>">
+                                <button type="submit" class="nobtn deletebtn">Delete</button>
+                            </form>
+                        </div>
+                    <?php } ?>
+                <?php } ?>
+            </div>
+        </div>
+    </div>
+    <div class="menuoverlay" id="editpricebox" onclick="if (event.target === this) closeboxes()">
+        <div class="menubox">
+            <button type="button" class="closebtn" onclick="closeboxes()">&#10005;</button>
+            <h2>Edit Price</h2>
+            <?php if (!empty($msg8)) 
+                { ?>
+                <p class="msgbox"><?php echo htmlspecialchars($msg8); ?></p>
+            <?php } ?>
+            <form action="admin.php" method="POST">
+                <input type="hidden" name="action" value="edit_price">
+                <label for="price_target">Flavor, Filling or Size</label>
+                <select id="price_target" name="price_target" required>
+                    <option value="">Choose what to price</option>
+                    <optgroup label="Flavors">
+                        <?php foreach ($cakelist as $c) 
+                            { ?>
+                            <option value="cake:<?php echo $c['id']; ?>"><?php echo htmlspecialchars($c['cake_name']); ?> (now <?php echo tk($c['price']); ?>)</option>
+                        <?php } ?>
+                    </optgroup>
+                    <optgroup label="Fillings">
+                        <?php foreach ($fillinglist as $fl) 
+                            { ?>
+                            <option value="filling:<?php echo $fl['id']; ?>"><?php echo htmlspecialchars($fl['filling_name']); ?> (now <?php echo tk($fl['price']); ?>)</option>
+                        <?php } ?>
+                    </optgroup>
+                    <optgroup label="Sizes">
+                        <?php foreach ($sizelist as $z) 
+                            { ?>
+                            <option value="size:<?php echo $z['id']; ?>"><?php echo htmlspecialchars($z['size_name']); ?> (now <?php echo tk($z['price']); ?>)</option>
+                        <?php } ?>
+                    </optgroup>
+                </select>
+                <label for="new_price">New Price (TK)</label>
+                <input type="number" id="new_price" name="new_price" min="0" step="0.01" placeholder="e.g. 750" required>
+                <button type="submit" class="addbtn">Set Price</button>
+            </form>
         </div>
     </div>
     <div class="adminwrap">
@@ -279,8 +544,11 @@ $orders_res = $conn->query("
                     <?php while ($order = $orders_res->fetch_assoc()) 
                         { ?>
                         <div class="ordercard">
+                            <p class="ordernum">Order #<?php echo $order['id']; ?></p>
                             <p><strong><?php echo htmlspecialchars($order['full_name']); ?></strong></p>
                             <p><?php echo htmlspecialchars($order['cake_details']); ?></p>
+                            <p><strong>Address:</strong> <?php echo htmlspecialchars($order['address']); ?></p>
+                            <p><strong>Total:</strong> <?php echo tk($order['total_price']); ?></p>
                             <div class="orderbtns">
                                 <form action="admin.php" method="POST">
                                     <input type="hidden" name="action" value="accept">
@@ -327,9 +595,97 @@ $orders_res = $conn->query("
                     <?php } ?>
                 </div>
             </div>
+            <div class="adminbox assignbox">
+                <h2>Assign Order to Rider</h2>
+                <?php if (!empty($msg9)) 
+                    { ?>
+                    <p class="msgbox"><?php echo htmlspecialchars($msg9); ?></p>
+                <?php } ?>
+                <?php if (count($riderlist) === 0) 
+                    { ?>
+                    <p class="formtext">Add a rider first.</p>
+                <?php } 
+                else if (count($assignable) === 0) 
+                    { ?>
+                    <p class="formtext">No accepted orders are waiting for a rider.</p>
+                <?php } 
+                else 
+                    { ?>
+                    <form action="admin.php" method="POST" class="smallform" id="assignform">
+                        <input type="hidden" name="action" value="assign_rider">
+                        <input type="hidden" name="assign_rider_id" id="assign_rider_id" value="">
+                        <div class="assignrow">
+                            <select id="rider_pick">
+                                <option value="">Choose a rider</option>
+                                <?php foreach ($riderlist as $r) 
+                                    { ?>
+                                    <option value="<?php echo $r['id']; ?>"><?php echo htmlspecialchars($r['id_name']); ?></option>
+                                <?php } ?>
+                            </select>
+                            <button type="button" class="addbtn assignbtn" id="selectbtn" onclick="pickrider()">Select</button>
+                        </div>
+                        <p class="pickedtxt" id="pickedtxt"></p>
+                        <div class="assignrow">
+                            <select id="assign_order_id" name="assign_order_id" disabled required>
+                                <option value="">Choose an order</option>
+                                <?php foreach ($assignable as $as) 
+                                    { ?>
+                                    <option value="<?php echo $as['id']; ?>">Order #<?php echo $as['id']; ?><?php if ($as['rider_status'] === 'declined') { echo " (declined by " . htmlspecialchars($as['rider_name']) . ")"; } else if ($as['rider_status'] === 'pending') { echo " (waiting for " . htmlspecialchars($as['rider_name']) . ")"; } ?></option>
+                                <?php } ?>
+                            </select>
+                            <button type="submit" class="addbtn assignbtn" id="assignbtn" disabled>Assign</button>
+                        </div>
+                    </form>
+                <?php } ?>
+                <div class="itemlist">
+                    <?php if ($assigned_res->num_rows === 0) 
+                        { ?>
+                        <p class="formtext">No assignments yet.</p>
+                    <?php } 
+                    else 
+                    { ?>
+                        <?php while ($ar = $assigned_res->fetch_assoc()) 
+                            { ?>
+                            <div class="itemline">
+                                <span>Order #<?php echo $ar['id']; ?> &rarr; <?php echo htmlspecialchars($ar['rider_name']); ?></span>
+                                <span class="qtytxt"><?php
+                                    if ($ar['status'] === 'delivered') { echo "Delivered"; }
+                                    else if ($ar['rider_status'] === 'pending') { echo "Awaiting rider"; }
+                                    else if ($ar['rider_status'] === 'accepted') { echo "Accepted"; }
+                                    else { echo "Declined"; }
+                                ?></span>
+                            </div>
+                        <?php } ?>
+                    <?php } ?>
+                </div>
+            </div>
         </div>
     </div>
     <script>
+        function pickrider()
+            {
+            var sel = document.getElementById('rider_pick');
+            if (sel.value === '') 
+                {
+                alert('Please choose a rider first.');
+                return;
+            }
+            document.getElementById('assign_rider_id').value = sel.value;
+            document.getElementById('pickedtxt').textContent = 'Selected rider: ' + sel.options[sel.selectedIndex].text;
+            document.getElementById('assign_order_id').disabled = false;
+            document.getElementById('assignbtn').disabled = false;
+        }
+        var rp = document.getElementById('rider_pick');
+        if (rp) 
+            {
+            rp.addEventListener('change', function () 
+                {
+                document.getElementById('assign_rider_id').value = '';
+                document.getElementById('pickedtxt').textContent = '';
+                document.getElementById('assign_order_id').disabled = true;
+                document.getElementById('assignbtn').disabled = true;
+            });
+        }
         function togglemenu()
             {
             document.getElementById('editdrop').classList.toggle('show');
@@ -338,6 +694,9 @@ $orders_res = $conn->query("
             {
             document.getElementById('addbox').classList.remove('show');
             document.getElementById('removebox').classList.remove('show');
+            document.getElementById('addfillingbox').classList.remove('show');
+            document.getElementById('removefillingbox').classList.remove('show');
+            document.getElementById('editpricebox').classList.remove('show');
         }
         function showbox(which)
             {
@@ -348,9 +707,22 @@ $orders_res = $conn->query("
                 document.getElementById('addbox').classList.add('show');
                 document.getElementById('cake_name').focus();
             } 
-            else 
+            else if (which === 'remove') 
                 {
                 document.getElementById('removebox').classList.add('show');
+            } 
+            else if (which === 'addfilling') 
+                {
+                document.getElementById('addfillingbox').classList.add('show');
+                document.getElementById('filling_name').focus();
+            } 
+            else if (which === 'removefilling') 
+                {
+                document.getElementById('removefillingbox').classList.add('show');
+            } 
+            else 
+                {
+                document.getElementById('editpricebox').classList.add('show');
             }
         }
         document.addEventListener('click', function (e) 

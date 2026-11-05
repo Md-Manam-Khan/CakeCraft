@@ -7,11 +7,43 @@ if (!isset($_SESSION['rider_id']))
 }
 $msg1 = "";
 $rname = $_SESSION['rider_name'];
+$my_id = (int) $_SESSION['rider_id'];
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && ($_POST['action'] === 'accept_job' || $_POST['action'] === 'decline_job')) 
+    {
+    $order_id = (int) $_POST['order_id'];
+    if ($_POST['action'] === 'accept_job') 
+        {
+        $newstat = 'accepted';
+    } 
+    else 
+        {
+        $newstat = 'declined';
+    }
+    $update = $conn->prepare("UPDATE orders SET rider_status = ? WHERE id = ? AND rider_id = ? AND rider_status = 'pending' AND status = 'accepted'");
+    $update->bind_param("sii", $newstat, $order_id, $my_id);
+    $update->execute();
+    if ($update->affected_rows > 0) 
+        {
+        if ($newstat === 'accepted') 
+            {
+            $msg1 = "You accepted order #$order_id. You can now send updates.";
+        } 
+        else 
+            {
+            $msg1 = "You declined order #$order_id.";
+        }
+    } 
+    else 
+        {
+        $msg1 = "That assignment is no longer available.";
+    }
+    $update->close();
+}
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && ($_POST['action'] === 'update' || $_POST['action'] === 'done')) 
     {
     $order_id = (int) $_POST['order_id'];
-    $check = $conn->prepare("SELECT id FROM orders WHERE id = ? AND status = 'accepted'");
-    $check->bind_param("i", $order_id);
+    $check = $conn->prepare("SELECT id FROM orders WHERE id = ? AND status = 'accepted' AND rider_id = ? AND rider_status = 'accepted'");
+    $check->bind_param("ii", $order_id, $my_id);
     $check->execute();
     $found = $check->get_result();
     if ($found->num_rows > 0) 
@@ -51,9 +83,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && ($_POST['
     }
     $check->close();
 }
-$stmt = $conn->prepare("SELECT orders.id, orders.cake_details, users.full_name FROM orders JOIN users ON orders.user_id = users.id WHERE orders.status = 'accepted' ORDER BY orders.created_at ASC");
+$stmt = $conn->prepare("SELECT orders.id, orders.cake_details, orders.address, orders.total_price, users.full_name FROM orders JOIN users ON orders.user_id = users.id WHERE orders.status = 'accepted' AND orders.rider_id = ? AND orders.rider_status = 'accepted' ORDER BY orders.created_at ASC");
+$stmt->bind_param("i", $my_id);
 $stmt->execute();
 $myorders = $stmt->get_result();
+$stmtn = $conn->prepare("SELECT orders.id, orders.cake_details, orders.address, orders.total_price, users.full_name FROM orders JOIN users ON orders.user_id = users.id WHERE orders.status = 'accepted' AND orders.rider_id = ? AND orders.rider_status = 'pending' ORDER BY orders.created_at ASC");
+$stmtn->bind_param("i", $my_id);
+$stmtn->execute();
+$newjobs = $stmtn->get_result();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -68,13 +105,45 @@ $myorders = $stmt->get_result();
     <div class="adminwrap">
         <h1 class="dashtitle" style="text-align:center;">Rider Panel</h1>
         <p class="dashsub" style="text-align:center;">Hi, <?php echo htmlspecialchars($rname); ?>!</p>
-        <div class="adminboxrow">
+        <?php if (!empty($msg1)) 
+            { ?>
+            <p class="msgbox" style="max-width:700px;margin:0 auto 20px;"><?php echo htmlspecialchars($msg1); ?></p>
+        <?php } ?>
+        <div class="adminboxrow" style="flex-direction:column;align-items:center;">
+            <div class="adminbox riderbox">
+                <h2>New Assignments</h2>
+                <?php if ($newjobs->num_rows === 0) 
+                    { ?>
+                    <p class="formtext">No new assignments right now.</p>
+                <?php } 
+                else 
+                { ?>
+                    <?php while ($job = $newjobs->fetch_assoc()) 
+                        { ?>
+                        <div class="ordercard">
+                            <p class="ordernum">Order #<?php echo $job['id']; ?></p>
+                            <p><strong><?php echo htmlspecialchars($job['full_name']); ?></strong></p>
+                            <p><?php echo htmlspecialchars($job['cake_details']); ?></p>
+                            <p><strong>Address:</strong> <?php echo htmlspecialchars($job['address']); ?></p>
+                            <p><strong>Total:</strong> <?php echo tk($job['total_price']); ?></p>
+                            <div class="orderbtns">
+                                <form action="rider.php" method="POST">
+                                    <input type="hidden" name="action" value="accept_job">
+                                    <input type="hidden" name="order_id" value="<?php echo $job['id']; ?>">
+                                    <button type="submit" class="okbtn">Accept</button>
+                                </form>
+                                <form action="rider.php" method="POST">
+                                    <input type="hidden" name="action" value="decline_job">
+                                    <input type="hidden" name="order_id" value="<?php echo $job['id']; ?>">
+                                    <button type="submit" class="nobtn">Decline</button>
+                                </form>
+                            </div>
+                        </div>
+                    <?php } ?>
+                <?php } ?>
+            </div>
             <div class="adminbox riderbox">
                 <h2>Ongoing Orders</h2>
-                <?php if (!empty($msg1)) 
-                    { ?>
-                    <p class="msgbox"><?php echo htmlspecialchars($msg1); ?></p>
-                <?php } ?>
                 <?php if ($myorders->num_rows === 0) 
                     { ?>
                     <p class="formtext">No ongoing orders right now.</p>
@@ -84,8 +153,11 @@ $myorders = $stmt->get_result();
                     <?php while ($order = $myorders->fetch_assoc()) 
                         { ?>
                         <div class="ordercard">
+                            <p class="ordernum">Order #<?php echo $order['id']; ?></p>
                             <p><strong><?php echo htmlspecialchars($order['full_name']); ?></strong></p>
                             <p><?php echo htmlspecialchars($order['cake_details']); ?></p>
+                            <p><strong>Address:</strong> <?php echo htmlspecialchars($order['address']); ?></p>
+                            <p><strong>Total:</strong> <?php echo tk($order['total_price']); ?></p>
                             <?php
                             $stmt2 = $conn->prepare("SELECT update_text, created_at FROM order_updates WHERE order_id = ? ORDER BY id ASC");
                             $stmt2->bind_param("i", $order['id']);

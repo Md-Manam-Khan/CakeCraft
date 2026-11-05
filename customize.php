@@ -9,41 +9,81 @@ $msg = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST") 
     {
     $flavor = trim($_POST['flavor']);
+    $filling = trim($_POST['filling']);
     $size = trim($_POST['size']);
+    $address = trim($_POST['address']);
     $note = trim($_POST['note']);
-    if (empty($flavor) || empty($size)) 
+    if (empty($flavor) || empty($filling) || empty($size) || empty($address)) 
         {
-        $msg = "Flavor and size are required.";
+        $msg = "Flavor, filling, size and address are required.";
     } 
     else 
         {
-        if (empty($note)) 
+        $p1 = $conn->prepare("SELECT price FROM cakes WHERE cake_name = ?");
+        $p1->bind_param("s", $flavor);
+        $p1->execute();
+        $r1 = $p1->get_result();
+        $p1->close();
+        $p2 = $conn->prepare("SELECT price FROM fillings WHERE filling_name = ?");
+        $p2->bind_param("s", $filling);
+        $p2->execute();
+        $r2 = $p2->get_result();
+        $p2->close();
+        $p3 = $conn->prepare("SELECT price FROM sizes WHERE size_name = ?");
+        $p3->bind_param("s", $size);
+        $p3->execute();
+        $r3 = $p3->get_result();
+        $p3->close();
+        if ($r1->num_rows === 0 || $r2->num_rows === 0 || $r3->num_rows === 0) 
             {
-            $notetxt = "None";
+            $msg = "Please choose a flavor, filling and size from the lists.";
         } 
         else 
             {
-            $notetxt = $note;
+            $row1 = $r1->fetch_assoc();
+            $row2 = $r2->fetch_assoc();
+            $row3 = $r3->fetch_assoc();
+            $total = $row1['price'] + $row2['price'] + $row3['price'];
+            if (empty($note)) 
+                {
+                $notetxt = "None";
+            } 
+            else 
+                {
+                $notetxt = $note;
+            }
+            $details = "Flavor: $flavor | Filling: $filling | Size: $size | Note: " . $notetxt;
+            $stmt = $conn->prepare("INSERT INTO orders (user_id, cake_details, address, total_price, status) VALUES (?, ?, ?, ?, 'pending')");
+            $stmt->bind_param("issd", $_SESSION['user_id'], $details, $address, $total);
+            if ($stmt->execute()) 
+                {
+                $msg = "Order placed successfully! Total: " . tk($total) . ". Track it under 'My Orders'.";
+            } 
+            else 
+                {
+                $msg = "Error: " . $stmt->error;
+            }
+            $stmt->close();
         }
-        $details = "Flavor: $flavor | Size: $size | Note: " . $notetxt;
-        $stmt = $conn->prepare("INSERT INTO orders (user_id, cake_details, status) VALUES (?, ?, 'pending')");
-        $stmt->bind_param("is", $_SESSION['user_id'], $details);
-        if ($stmt->execute()) 
-            {
-            $msg = "Order placed successfully! Track it under 'My Orders'.";
-        } 
-        else 
-            {
-            $msg = "Error: " . $stmt->error;
-        }
-        $stmt->close();
     }
 }
-$menu_res = $conn->query("SELECT cake_name FROM cakes ORDER BY cake_name ASC");
+$menu_res = $conn->query("SELECT cake_name, price FROM cakes ORDER BY cake_name ASC");
 $menulist = array();
 while ($m = $menu_res->fetch_assoc()) 
     {
     $menulist[] = $m;
+}
+$fillings_res = $conn->query("SELECT filling_name, price FROM fillings ORDER BY filling_name ASC");
+$fillinglist = array();
+while ($f = $fillings_res->fetch_assoc()) 
+    {
+    $fillinglist[] = $f;
+}
+$sizes_res = $conn->query("SELECT size_name, price FROM sizes ORDER BY id ASC");
+$sizelist = array();
+while ($z = $sizes_res->fetch_assoc()) 
+    {
+    $sizelist[] = $z;
 }
 $conn->close();
 ?>
@@ -66,33 +106,90 @@ $conn->close();
             <?php } ?>
             <form action="customize.php" method="POST">
                 <label for="flavor">Cake Flavor</label>
-                <input type="text" id="flavor" name="flavor" placeholder="e.g. Chocolate, Vanilla, Red Velvet" required>
+                <select id="flavor" name="flavor" required>
+                    <?php if (count($menulist) === 0) 
+                        { ?>
+                        <option value="">No cakes available right now</option>
+                    <?php } 
+                    else 
+                    { ?>
+                        <option value="">Choose a cake</option>
+                        <?php foreach ($menulist as $m) 
+                            { ?>
+                            <option value="<?php echo htmlspecialchars($m['cake_name']); ?>" data-price="<?php echo $m['price']; ?>"><?php echo htmlspecialchars($m['cake_name']); ?> — <?php echo tk($m['price']); ?></option>
+                        <?php } ?>
+                    <?php } ?>
+                </select>
+                <label for="filling">Cake Filling</label>
+                <select id="filling" name="filling" required>
+                    <?php if (count($fillinglist) === 0) 
+                        { ?>
+                        <option value="">No fillings available right now</option>
+                    <?php } 
+                    else 
+                    { ?>
+                        <option value="">Choose a filling</option>
+                        <?php foreach ($fillinglist as $f) 
+                            { ?>
+                            <option value="<?php echo htmlspecialchars($f['filling_name']); ?>" data-price="<?php echo $f['price']; ?>"><?php echo htmlspecialchars($f['filling_name']); ?> — <?php echo tk($f['price']); ?></option>
+                        <?php } ?>
+                    <?php } ?>
+                </select>
                 <label for="size">Cake Size</label>
-                <input type="text" id="size" name="size" placeholder="e.g. Small, Medium, Large" required>
+                <select id="size" name="size" required>
+                    <?php if (count($sizelist) === 0) 
+                        { ?>
+                        <option value="">No sizes available right now</option>
+                    <?php } 
+                    else 
+                    { ?>
+                        <option value="">Choose a size</option>
+                        <?php foreach ($sizelist as $z) 
+                            { ?>
+                            <option value="<?php echo htmlspecialchars($z['size_name']); ?>" data-price="<?php echo $z['price']; ?>"><?php echo htmlspecialchars($z['size_name']); ?> — <?php echo tk($z['price']); ?></option>
+                        <?php } ?>
+                    <?php } ?>
+                </select>
+                <label for="address">Delivery Address</label>
+                <textarea id="address" name="address" placeholder="Enter your full delivery address" rows="3" required></textarea>
                 <label for="note">Special Instructions</label>
                 <textarea id="note" name="note" placeholder="Any message on the cake, allergies, etc. (optional)" rows="4"></textarea>
+                <div class="totalbox">
+                    <p class="totalfinal">Total: <span id="ptotal"></span></p>
+                </div>
                 <button type="submit">Place Order</button>
             </form>
             <a href="dashboard.php" class="backlink">← Back to Dashboard</a>
         </div>
-        <div class="menucard">
-            <h2>Our Menu</h2>
-            <p class="formtext">Take a look at what we bake, then tell us what you'd like in the order box.</p>
-            <div class="itemlist">
-                <?php if (count($menulist) === 0) 
-                    { ?>
-                    <p class="formtext">The menu is empty right now.</p>
-                <?php } 
-                else 
-                { ?>
-                    <?php foreach ($menulist as $m) 
-                        { ?>
-                        <div class="menuitem"><?php echo htmlspecialchars($m['cake_name']); ?></div>
-                    <?php } ?>
-                <?php } ?>
-            </div>
-        </div>
         </div>
     </div>
+    <script>
+        function money(n)
+            {
+            var s = n.toFixed(2);
+            if (s.slice(-3) === '.00') 
+                {
+                s = s.slice(0, -3);
+            }
+            return s + ' TK';
+        }
+        function getprice(id)
+            {
+            var sel = document.getElementById(id);
+            var opt = sel.options[sel.selectedIndex];
+            return parseFloat(opt.getAttribute('data-price')) || 0;
+        }
+        function recalc()
+            {
+            var a = getprice('flavor');
+            var b = getprice('filling');
+            var c = getprice('size');
+            document.getElementById('ptotal').textContent = money(a + b + c);
+        }
+        document.getElementById('flavor').addEventListener('change', recalc);
+        document.getElementById('filling').addEventListener('change', recalc);
+        document.getElementById('size').addEventListener('change', recalc);
+        recalc();
+    </script>
 </body>
 </html>

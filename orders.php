@@ -5,7 +5,7 @@ if (!isset($_SESSION['user_id']))
     header("Location: signin.php");
     exit;
 }
-$stmt = $conn->prepare("SELECT id, cake_details, status, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC");
+$stmt = $conn->prepare("SELECT id, cake_details, address, total_price, status, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC");
 $stmt->bind_param("i", $_SESSION['user_id']);
 $stmt->execute();
 $orders = $stmt->get_result();
@@ -32,6 +32,8 @@ $orders = $stmt->get_result();
                     { ?>
                     <div class="ordercard">
                         <p><?php echo htmlspecialchars($order['cake_details']); ?></p>
+                        <p><strong>Address:</strong> <?php echo htmlspecialchars($order['address']); ?></p>
+                        <p><strong>Total:</strong> <?php echo tk($order['total_price']); ?></p>
                         <span class="statustxt status-<?php echo strtolower($order['status']); ?>">
                             <?php echo ucfirst($order['status']); ?>
                         </span>
