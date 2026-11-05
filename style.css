@@ -181,7 +181,8 @@ label
     color: #444;
 }
 input,
-textarea
+textarea,
+select
 {
     width: 100%;
     padding: 11px;
@@ -193,7 +194,8 @@ textarea
     background-color: white;
 }
 input:focus,
-textarea:focus
+textarea:focus,
+select:focus
 {
     border: 2px solid rgba(228, 125, 23, 0.86);
 }
@@ -859,4 +861,77 @@ input[type="number"]::-webkit-inner-spin-button
     {
         top: 38px;
     }
+}
+.totalbox
+{
+    margin-top: 20px;
+    padding: 14px 16px;
+    background-color: rgba(255, 243, 230, 0.95);
+    border: 1.5px solid rgba(228, 125, 23, 0.5);
+    border-radius: 10px;
+}
+.totalbox p
+{
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+    font-size: 14px;
+    color: #555;
+}
+.totalbox .totalfinal
+{
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(228, 125, 23, 0.6);
+    font-size: 18px;
+    font-weight: bold;
+    color: rgba(228, 125, 23, 0.95);
+}
+
+.ordernum
+{
+    font-weight: bold;
+    color: rgba(228, 125, 23, 0.95);
+    font-size: 15px;
+}
+.assignbox
+{
+    max-width: 700px;
+}
+.assignrow
+{
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.assignrow select
+{
+    flex: 1;
+    margin: 0;
+}
+.assignbtn
+{
+    width: auto;
+    margin: 0;
+    padding: 10px 18px;
+    white-space: nowrap;
+}
+.pickedtxt
+{
+    font-size: 13px;
+    font-weight: bold;
+    color: rgba(34, 139, 58, 0.95);
+    margin-bottom: 12px;
+}
+.assignbtn:hover,
+.assignbtn:active
+{
+    width: auto;
+    margin: 0;
+}
+.assignbtn:disabled
+{
+    opacity: 0.5;
+    cursor: not-allowed;
 }
