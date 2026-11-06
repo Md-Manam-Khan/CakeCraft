@@ -8,6 +8,10 @@ if (!isset($_SESSION['rider_id']))
 $msg1 = "";
 $rname = $_SESSION['rider_name'];
 $my_id = (int) $_SESSION['rider_id'];
+if ($_SERVER["REQUEST_METHOD"] == "POST") 
+    {
+    csrf_check();
+}
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && ($_POST['action'] === 'accept_job' || $_POST['action'] === 'decline_job')) 
     {
     $order_id = (int) $_POST['order_id'];
@@ -54,7 +58,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && ($_POST['
         } 
         else 
             {
-            $said = trim($_POST['text']);
+            $said = trim(isset($_POST['text']) ? $_POST['text'] : '');
+            if (mb_strlen($said) > 200) 
+                {
+                $said = mb_substr($said, 0, 200);
+            }
         }
         if (empty($said)) 
             {
@@ -62,6 +70,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && ($_POST['
         } 
         else 
             {
+            $conn->begin_transaction();
             $insert = $conn->prepare("INSERT INTO order_updates (order_id, update_text) VALUES (?, ?)");
             $insert->bind_param("is", $order_id, $said);
             $insert->execute();
@@ -79,6 +88,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && ($_POST['
                 {
                 $msg1 = "Update sent for order #$order_id.";
             }
+            $conn->commit();
         }
     }
     $check->close();
@@ -128,11 +138,13 @@ $newjobs = $stmtn->get_result();
                             <p><strong>Total:</strong> <?php echo tk($job['total_price']); ?></p>
                             <div class="orderbtns">
                                 <form action="rider.php" method="POST">
+                    <?php echo csrf_field(); ?>
                                     <input type="hidden" name="action" value="accept_job">
                                     <input type="hidden" name="order_id" value="<?php echo $job['id']; ?>">
                                     <button type="submit" class="okbtn">Accept</button>
                                 </form>
                                 <form action="rider.php" method="POST">
+                    <?php echo csrf_field(); ?>
                                     <input type="hidden" name="action" value="decline_job">
                                     <input type="hidden" name="order_id" value="<?php echo $job['id']; ?>">
                                     <button type="submit" class="nobtn">Decline</button>
@@ -175,6 +187,7 @@ $newjobs = $stmtn->get_result();
                             <?php } 
                             $stmt2->close(); ?>
                             <form action="rider.php" method="POST" class="updateform">
+                    <?php echo csrf_field(); ?>
                                 <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
                                 <input type="text" name="text" maxlength="200" placeholder="e.g. Received, Reached, On the way">
                                 <div class="updatebtns">

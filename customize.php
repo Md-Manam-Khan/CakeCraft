@@ -8,28 +8,37 @@ if (!isset($_SESSION['user_id']))
 $msg = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST") 
     {
-    $flavor = trim($_POST['flavor']);
-    $filling = trim($_POST['filling']);
-    $size = trim($_POST['size']);
-    $address = trim($_POST['address']);
-    $note = trim($_POST['note']);
-    if (empty($flavor) || empty($filling) || empty($size) || empty($address)) 
+    csrf_check();
+    $flavor = trim(isset($_POST['flavor']) ? $_POST['flavor'] : '');
+    $filling = trim(isset($_POST['filling']) ? $_POST['filling'] : '');
+    $size = trim(isset($_POST['size']) ? $_POST['size'] : '');
+    $address = trim(isset($_POST['address']) ? $_POST['address'] : '');
+    $note = trim(isset($_POST['note']) ? $_POST['note'] : '');
+    if ($flavor === '' || $filling === '' || $size === '' || $address === '') 
         {
         $msg = "Flavor, filling, size and address are required.";
     } 
+    else if (mb_strlen($address) < 5 || mb_strlen($address) > 500) 
+        {
+        $msg = "Please enter a full delivery address (5 to 500 characters).";
+    } 
+    else if (mb_strlen($note) > 500) 
+        {
+        $msg = "Special instructions can be at most 500 characters.";
+    } 
     else 
         {
-        $p1 = $conn->prepare("SELECT price FROM cakes WHERE cake_name = ?");
+        $p1 = $conn->prepare("SELECT price FROM cakes WHERE cake_name = ? AND price > 0");
         $p1->bind_param("s", $flavor);
         $p1->execute();
         $r1 = $p1->get_result();
         $p1->close();
-        $p2 = $conn->prepare("SELECT price FROM fillings WHERE filling_name = ?");
+        $p2 = $conn->prepare("SELECT price FROM fillings WHERE filling_name = ? AND price > 0");
         $p2->bind_param("s", $filling);
         $p2->execute();
         $r2 = $p2->get_result();
         $p2->close();
-        $p3 = $conn->prepare("SELECT price FROM sizes WHERE size_name = ?");
+        $p3 = $conn->prepare("SELECT price FROM sizes WHERE size_name = ? AND price > 0");
         $p3->bind_param("s", $size);
         $p3->execute();
         $r3 = $p3->get_result();
@@ -61,25 +70,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST")
             } 
             else 
                 {
-                $msg = "Error: " . $stmt->error;
+                error_log("CakeCraft order error: " . $stmt->error);
+                $msg = "Sorry, we could not place your order. Please try again.";
             }
             $stmt->close();
         }
     }
 }
-$menu_res = $conn->query("SELECT cake_name, price FROM cakes ORDER BY cake_name ASC");
+$menu_res = $conn->query("SELECT cake_name, price FROM cakes WHERE price > 0 ORDER BY cake_name ASC");
 $menulist = array();
 while ($m = $menu_res->fetch_assoc()) 
     {
     $menulist[] = $m;
 }
-$fillings_res = $conn->query("SELECT filling_name, price FROM fillings ORDER BY filling_name ASC");
+$fillings_res = $conn->query("SELECT filling_name, price FROM fillings WHERE price > 0 ORDER BY filling_name ASC");
 $fillinglist = array();
 while ($f = $fillings_res->fetch_assoc()) 
     {
     $fillinglist[] = $f;
 }
-$sizes_res = $conn->query("SELECT size_name, price FROM sizes ORDER BY id ASC");
+$sizes_res = $conn->query("SELECT size_name, price FROM sizes WHERE price > 0 ORDER BY id ASC");
 $sizelist = array();
 while ($z = $sizes_res->fetch_assoc()) 
     {
@@ -105,6 +115,7 @@ $conn->close();
                 <p class="msgbox"><?php echo htmlspecialchars($msg); ?></p>
             <?php } ?>
             <form action="customize.php" method="POST">
+                    <?php echo csrf_field(); ?>
                 <label for="flavor">Cake Flavor</label>
                 <select id="flavor" name="flavor" required>
                     <?php if (count($menulist) === 0) 
@@ -151,9 +162,9 @@ $conn->close();
                     <?php } ?>
                 </select>
                 <label for="address">Delivery Address</label>
-                <textarea id="address" name="address" placeholder="Enter your full delivery address" rows="3" required></textarea>
+                <textarea id="address" name="address" placeholder="Enter your full delivery address" rows="3" maxlength="500" required></textarea>
                 <label for="note">Special Instructions</label>
-                <textarea id="note" name="note" placeholder="Any message on the cake, allergies, etc. (optional)" rows="4"></textarea>
+                <textarea id="note" name="note" placeholder="Any message on the cake, allergies, etc. (optional)" rows="4" maxlength="500"></textarea>
                 <div class="totalbox">
                     <p class="totalfinal">Total: <span id="ptotal"></span></p>
                 </div>

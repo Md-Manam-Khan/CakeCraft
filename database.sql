@@ -1,7 +1,16 @@
+-- =====================================================================
+-- CakeCraft database (single file). WARNING: this DROPS the old
+-- CakeCraft database and every row in it, then rebuilds it from scratch.
+-- Paste it into phpMyAdmin > SQL (or import it) on your XAMPP server.
+-- Default admin login after import:  username = admin   password = admin123
+-- (change it from the admin panel with the "Edit Credentials" button)
+-- =====================================================================
 DROP DATABASE IF EXISTS CakeCraft;
-CREATE DATABASE CakeCraft;
+CREATE DATABASE CakeCraft CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE CakeCraft;
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS login_attempts;
+DROP TABLE IF EXISTS admins;
 DROP TABLE IF EXISTS order_updates;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS riders;
@@ -20,6 +29,23 @@ CREATE TABLE users
     id_name VARCHAR(50) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE admins 
+(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE login_attempts 
+(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    scope VARCHAR(10) NOT NULL,
+    ident VARCHAR(100) NOT NULL,
+    ip VARCHAR(45) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_attempts_ident (scope, ident, created_at),
+    INDEX idx_attempts_ip (scope, ip, created_at)
 );
 CREATE TABLE items 
 (
@@ -65,6 +91,7 @@ CREATE TABLE orders
     rider_id INT NULL,
     rider_status VARCHAR(20) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_orders_status (status),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (rider_id) REFERENCES riders(id)
 );
@@ -76,6 +103,9 @@ CREATE TABLE order_updates
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id)
 );
+-- Default admin: username "admin", password "admin123" (stored only as a bcrypt hash)
+INSERT INTO admins (username, password) VALUES
+('admin', '$2y$10$mCOqQ4y.D2o19SndlRopq.oI.8CX1zZjVuYAJW7eole3NILjY0QWC');
 INSERT INTO cakes (cake_name, price) VALUES
 ('Chocolate Truffle', 800.00),
 ('Vanilla Bean', 700.00),

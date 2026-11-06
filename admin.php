@@ -1,9 +1,14 @@
 <?php
 require "config.php";
-if (!isset($_SESSION['admin_logged_in'])) 
+if (!isset($_SESSION['admin_logged_in']) || empty($_SESSION['admin_id'])) 
     {
     header("Location: admin_login.php");
     exit;
+}
+$admin_id = (int) $_SESSION['admin_id'];
+if ($_SERVER["REQUEST_METHOD"] == "POST") 
+    {
+    csrf_check();
 }
 $msg1 = "";
 $msg2 = "";
@@ -12,6 +17,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
     {
     $item_name = trim($_POST['item_name']);
     $quantity = (int) $_POST['quantity'];
+    if ($item_name === '' || strlen($item_name) > 100 || $quantity < 1 || $quantity > 1000000) 
+        {
+        $msg1 = "Enter an item name (max 100 letters) and a quantity between 1 and 1,000,000.";
+    } 
+    else 
+        {
     $check = $conn->prepare("SELECT id, quantity FROM items WHERE item_name = ?");
     $check->bind_param("s", $item_name);
     $check->execute();
@@ -35,6 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
         $msg1 = "Added new item '$item_name'.";
     }
     $check->close();
+    }
 }
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && ($_POST['action'] === 'accept' || $_POST['action'] === 'decline')) {
     $order_id = (int) $_POST['order_id'];
@@ -99,9 +111,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
     {
     $rname = trim($_POST['rname']);
     $rpass = $_POST['rpass'];
-    if (empty($rname) || empty($rpass)) 
+    if ($rname === '' || $rpass === '') 
         {
         $msg3 = "Rider ID name and password are required.";
+    } 
+    else if (!valid_idname($rname)) 
+        {
+        $msg3 = "Rider ID name must be 3-50 characters: letters, numbers, dot, underscore or dash, with at least one letter.";
+    } 
+    else if (!valid_password($rpass)) 
+        {
+        $msg3 = "Rider password must be between 8 and 72 characters.";
     } 
     else 
         {
@@ -158,7 +178,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             $insert->bind_param("s", $cake_name);
             $insert->execute();
             $insert->close();
-            $msg4 = "'$cake_name' has been added to the menu.";
+            $msg4 = "'$cake_name' has been added to the menu. Set its price with Edit Price - customers cannot order it until its price is above 0 TK.";
         }
         $check->close();
     }
@@ -236,6 +256,64 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
         $check->close();
     }
 }
+$msg10 = "";
+$msg10ok = false;
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] === 'edit_credentials') 
+    {
+    $openbox = "credentials";
+    $new_user = trim(isset($_POST['new_username']) ? $_POST['new_username'] : '');
+    $new_user2 = trim(isset($_POST['confirm_username']) ? $_POST['confirm_username'] : '');
+    $new_pass = isset($_POST['new_password']) ? $_POST['new_password'] : '';
+    $new_pass2 = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
+    if ($new_user === '' || $new_user2 === '' || $new_pass === '' || $new_pass2 === '') 
+        {
+        $msg10 = "Please fill in all four boxes.";
+    } 
+    else if ($new_user !== $new_user2) 
+        {
+        $msg10 = "Admin Profile and Confirm Admin Profile do not match.";
+    } 
+    else if (!valid_idname($new_user)) 
+        {
+        $msg10 = "Admin Profile must be 3-50 characters: letters, numbers, dot, underscore or dash, with at least one letter.";
+    } 
+    else if ($new_pass !== $new_pass2) 
+        {
+        $msg10 = "Admin Password and Confirm Admin Password do not match.";
+    } 
+    else if (!valid_password($new_pass)) 
+        {
+        $msg10 = "Admin Password must be between 8 and 72 characters.";
+    } 
+    else if ($new_pass === 'admin123') 
+        {
+        $msg10 = "Please choose a different password from the default one.";
+    } 
+    else 
+        {
+        $check = $conn->prepare("SELECT id FROM admins WHERE username = ? AND id <> ?");
+        $check->bind_param("si", $new_user, $admin_id);
+        $check->execute();
+        $check->store_result();
+        if ($check->num_rows > 0) 
+            {
+            $msg10 = "That Admin Profile is already taken.";
+        } 
+        else 
+            {
+            $newhash = password_hash($new_pass, PASSWORD_DEFAULT);
+            $update = $conn->prepare("UPDATE admins SET username = ?, password = ? WHERE id = ?");
+            $update->bind_param("ssi", $new_user, $newhash, $admin_id);
+            $update->execute();
+            $update->close();
+            session_regenerate_id(true);
+            $_SESSION['admin_name'] = $new_user;
+            $msg10 = "Credentials saved. Use the new Admin Profile and Admin Password the next time you log in.";
+            $msg10ok = true;
+        }
+        $check->close();
+    }
+}
 $cakes_res = $conn->query("SELECT id, cake_name, price FROM cakes ORDER BY cake_name ASC");
 $cakelist = array();
 while ($c = $cakes_res->fetch_assoc()) 
@@ -270,7 +348,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             $insert->bind_param("s", $filling_name);
             $insert->execute();
             $insert->close();
-            $msg6 = "'$filling_name' has been added to the fillings.";
+            $msg6 = "'$filling_name' has been added to the fillings. Set its price with Edit Price - customers cannot choose it until its price is above 0 TK.";
         }
         $check->close();
     }
@@ -352,9 +430,16 @@ $assigned_res = $conn->query("
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - CakeCraft</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .credwrap { position: fixed; top: 18px; right: 232px; z-index: 999; }
+        @media (max-width: 600px) { .credwrap { top: 52px; right: 12px; } }
+    </style>
 </head>
 <body class="adminpage">
     <a href="admin_logout.php" class="devbtn logoutbtn">Logout</a>
+    <div class="credwrap">
+        <button type="button" class="editbtn" onclick="showbox('credentials')">Edit Credentials</button>
+    </div>
     <div class="editwrap">
         <button type="button" class="editbtn" onclick="togglemenu()">Edit Menu &#9662;</button>
         <div class="editdrop" id="editdrop">
@@ -374,6 +459,7 @@ $assigned_res = $conn->query("
                 <p class="msgbox"><?php echo htmlspecialchars($msg4); ?></p>
             <?php } ?>
             <form action="admin.php" method="POST">
+                    <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" value="add_cake">
                 <label for="cake_name">Cake Name</label>
                 <input type="text" id="cake_name" name="cake_name" maxlength="100" placeholder="e.g. Chocolate Truffle" required>
@@ -401,6 +487,7 @@ $assigned_res = $conn->query("
                         <div class="menuline">
                             <span><?php echo htmlspecialchars($c['cake_name']); ?></span>
                             <form action="admin.php" method="POST">
+                    <?php echo csrf_field(); ?>
                                 <input type="hidden" name="action" value="remove_cake">
                                 <input type="hidden" name="cake_id" value="<?php echo $c['id']; ?>">
                                 <button type="submit" class="nobtn deletebtn">Delete</button>
@@ -420,6 +507,7 @@ $assigned_res = $conn->query("
                 <p class="msgbox"><?php echo htmlspecialchars($msg6); ?></p>
             <?php } ?>
             <form action="admin.php" method="POST">
+                    <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" value="add_filling">
                 <label for="filling_name">Filling Name</label>
                 <input type="text" id="filling_name" name="filling_name" maxlength="100" placeholder="e.g. Caramel" required>
@@ -447,6 +535,7 @@ $assigned_res = $conn->query("
                         <div class="menuline">
                             <span><?php echo htmlspecialchars($fl['filling_name']); ?></span>
                             <form action="admin.php" method="POST">
+                    <?php echo csrf_field(); ?>
                                 <input type="hidden" name="action" value="remove_filling">
                                 <input type="hidden" name="filling_id" value="<?php echo $fl['id']; ?>">
                                 <button type="submit" class="nobtn deletebtn">Delete</button>
@@ -466,6 +555,7 @@ $assigned_res = $conn->query("
                 <p class="msgbox"><?php echo htmlspecialchars($msg8); ?></p>
             <?php } ?>
             <form action="admin.php" method="POST">
+                    <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" value="edit_price">
                 <label for="price_target">Flavor, Filling or Size</label>
                 <select id="price_target" name="price_target" required>
@@ -495,6 +585,29 @@ $assigned_res = $conn->query("
             </form>
         </div>
     </div>
+    <div class="menuoverlay" id="credbox" onclick="if (event.target === this) closeboxes()">
+        <div class="menubox">
+            <button type="button" class="closebtn" onclick="closeboxes()">&#10005;</button>
+            <h2>Edit Credentials</h2>
+            <?php if (!empty($msg10)) 
+                { ?>
+                <p class="msgbox"><?php echo e($msg10); ?></p>
+            <?php } ?>
+            <form action="admin.php" method="POST" autocomplete="off">
+                    <?php echo csrf_field(); ?>
+                <input type="hidden" name="action" value="edit_credentials">
+                <label for="new_username">Admin Profile</label>
+                <input type="text" id="new_username" name="new_username" maxlength="50" autocomplete="off" required>
+                <label for="confirm_username">Confirm Admin Profile</label>
+                <input type="text" id="confirm_username" name="confirm_username" maxlength="50" autocomplete="off" required>
+                <label for="new_password">Admin Password</label>
+                <input type="password" id="new_password" name="new_password" minlength="8" maxlength="72" autocomplete="new-password" required>
+                <label for="confirm_password">Confirm Admin Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" minlength="8" maxlength="72" autocomplete="new-password" required>
+                <button type="submit" class="addbtn">Save Credentials</button>
+            </form>
+        </div>
+    </div>
     <div class="adminwrap">
         <h1 class="dashtitle">Admin Panel</h1>
         <div class="adminboxrow">
@@ -505,6 +618,7 @@ $assigned_res = $conn->query("
                     <p class="msgbox"><?php echo htmlspecialchars($msg1); ?></p>
                 <?php } ?>
                 <form action="admin.php" method="POST" class="smallform">
+                    <?php echo csrf_field(); ?>
                     <input type="hidden" name="action" value="add_item">
                     <label for="item_name">Item Name</label>
                     <input type="text" id="item_name" name="item_name" placeholder="e.g. Flour, Sugar, Eggs" required>
@@ -551,11 +665,13 @@ $assigned_res = $conn->query("
                             <p><strong>Total:</strong> <?php echo tk($order['total_price']); ?></p>
                             <div class="orderbtns">
                                 <form action="admin.php" method="POST">
+                    <?php echo csrf_field(); ?>
                                     <input type="hidden" name="action" value="accept">
                                     <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
                                     <button type="submit" class="okbtn">Accept</button>
                                 </form>
                                 <form action="admin.php" method="POST">
+                    <?php echo csrf_field(); ?>
                                     <input type="hidden" name="action" value="decline">
                                     <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
                                     <button type="submit" class="nobtn">Decline</button>
@@ -572,11 +688,12 @@ $assigned_res = $conn->query("
                     <p class="msgbox"><?php echo htmlspecialchars($msg3); ?></p>
                 <?php } ?>
                 <form action="admin.php" method="POST" class="smallform">
+                    <?php echo csrf_field(); ?>
                     <input type="hidden" name="action" value="add_rider">
                     <label for="rname">Rider ID Name</label>
-                    <input type="text" id="rname" name="rname" placeholder="Choose a rider ID name" required>
+                    <input type="text" id="rname" name="rname" placeholder="Choose a rider ID name" maxlength="50" required>
                     <label for="rpass">Rider Password</label>
-                    <input type="text" id="rpass" name="rpass" placeholder="Set a password for the rider" required>
+                    <input type="text" id="rpass" name="rpass" placeholder="Set a password (min 8 characters)" minlength="8" maxlength="72" required>
                     <button type="submit" class="addbtn">Add Rider</button>
                 </form>
                 <div class="itemlist">
@@ -612,6 +729,7 @@ $assigned_res = $conn->query("
                 else 
                     { ?>
                     <form action="admin.php" method="POST" class="smallform" id="assignform">
+                    <?php echo csrf_field(); ?>
                         <input type="hidden" name="action" value="assign_rider">
                         <input type="hidden" name="assign_rider_id" id="assign_rider_id" value="">
                         <div class="assignrow">
@@ -697,6 +815,7 @@ $assigned_res = $conn->query("
             document.getElementById('addfillingbox').classList.remove('show');
             document.getElementById('removefillingbox').classList.remove('show');
             document.getElementById('editpricebox').classList.remove('show');
+            document.getElementById('credbox').classList.remove('show');
         }
         function showbox(which)
             {
@@ -719,6 +838,11 @@ $assigned_res = $conn->query("
             else if (which === 'removefilling') 
                 {
                 document.getElementById('removefillingbox').classList.add('show');
+            } 
+            else if (which === 'credentials') 
+                {
+                document.getElementById('credbox').classList.add('show');
+                document.getElementById('new_username').focus();
             } 
             else 
                 {
