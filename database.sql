@@ -1,10 +1,3 @@
--- =====================================================================
--- CakeCraft database (single file). WARNING: this DROPS the old
--- CakeCraft database and every row in it, then rebuilds it from scratch.
--- Paste it into phpMyAdmin > SQL (or import it) on your XAMPP server.
--- Default admin login after import:  username = admin   password = admin123
--- (change it from the admin panel with the "Edit Credentials" button)
--- =====================================================================
 DROP DATABASE IF EXISTS CakeCraft;
 CREATE DATABASE CakeCraft CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE CakeCraft;
@@ -103,7 +96,6 @@ CREATE TABLE order_updates
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id)
 );
--- Default admin: username "admin", password "admin123" (stored only as a bcrypt hash)
 INSERT INTO admins (username, password) VALUES
 ('admin', '$2y$10$mCOqQ4y.D2o19SndlRopq.oI.8CX1zZjVuYAJW7eole3NILjY0QWC');
 INSERT INTO cakes (cake_name, price) VALUES
