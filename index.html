@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CakeCraft</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <form class="searchwrap" id="foodsearch" action="search.php" method="get" autocomplete="off" role="search">
+        <input type="search" id="foodq" name="q" placeholder="Search for food" maxlength="100" aria-label="Search for food">
+        <div class="searchresult" id="searchresult" role="status" aria-live="polite"></div>
+    </form>
+    <a href="https://github.com/Md-Manam-Khan" class="devbtn" target="_blank" rel="noopener noreferrer">Dev: Md-Manam-Khan</a>
+    <div class="box1">
+        <h1>Welcome to CakeCraft</h1>
+        <p>Design your dream cake, place your order, and track it — all in one place.</p>
+        <div class="btnrow">
+            <a href="signin.php" class="mainbtn">Sign In</a>
+            <a href="signup.php" class="mainbtn">Sign Up</a>
+        </div>
+        <div class="btnrow">
+            <a href="admin_login.php" class="adminbtn">Admin Login</a>
+            <a href="rider_login.php" class="adminbtn">Rider Login</a>
+        </div>
+    </div>
+    <script>
+        (function () 
+            {
+            var form = document.getElementById('foodsearch');
+            var input = document.getElementById('foodq');
+            var box = document.getElementById('searchresult');
+            var counter = 0;
+            function show(text, cls) 
+                {
+                box.textContent = text;
+                box.className = 'searchresult show ' + cls;
+            }
+            function hide() 
+                {
+                box.className = 'searchresult';
+            }
+            form.addEventListener('submit', function (e) 
+                {
+                e.preventDefault();
+                var q = input.value.trim();
+                if (q === '') 
+                    {
+                    hide();
+                    return;
+                }
+                var id = ++counter;
+                fetch('search.php?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) 
+                        {
+                        if (id !== counter) 
+                            {
+                            return;
+                        }
+                        if (data.available) 
+                            {
+                            show('Available', 'ok');
+                        } 
+                        else 
+                            {
+                            show('Not available', 'no');
+                        }
+                    })
+                    .catch(function () 
+                        {
+                        show('Could not search right now. Please try again.', 'no');
+                    });
+            });
+            input.addEventListener('input', hide);
+            document.addEventListener('click', function (e) 
+                {
+                if (!form.contains(e.target)) 
+                    {
+                    hide();
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
