@@ -1,6 +1,14 @@
 <?php
+// ---------------------------------------------------------------
+// CakeCraft - shared configuration, security helpers, DB connection
+// ---------------------------------------------------------------
+
+// Never show raw PHP/MySQL errors to visitors; write them to the server log instead
+// (XAMPP: xampp/apache/logs/error.log).
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
+
+// Safer session cookies
 $cc_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
 ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
@@ -12,6 +20,8 @@ session_set_cookie_params(array(
     'samesite' => 'Lax'
 ));
 session_start();
+
+// Log out anybody who has been idle for 30 minutes
 if (isset($_SESSION['last_active']) && (time() - $_SESSION['last_active']) > 1800) 
     {
     session_unset();
@@ -20,13 +30,18 @@ if (isset($_SESSION['last_active']) && (time() - $_SESSION['last_active']) > 180
     session_regenerate_id(true);
 }
 $_SESSION['last_active'] = time();
+
+// Basic security headers
 header("X-Frame-Options: DENY");
 header("X-Content-Type-Options: nosniff");
 header("Referrer-Policy: same-origin");
+
+// Database settings (can be overridden with environment variables when hosting online)
 $host = getenv('DB_HOST') ? getenv('DB_HOST') : "localhost";
 $db_user = getenv('DB_USER') ? getenv('DB_USER') : "root";
 $db_pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : "";
 $db_name = getenv('DB_NAME') ? getenv('DB_NAME') : "CakeCraft";
+
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 set_exception_handler(function ($ex) 
     {
@@ -34,6 +49,7 @@ set_exception_handler(function ($ex)
     http_response_code(500);
     echo "Sorry, something went wrong. Please go back and try again.";
 });
+
 function tk($n)
     {
     $s = number_format((float) $n, 2, '.', '');
@@ -43,10 +59,14 @@ function tk($n)
     }
     return $s . " TK";
 }
+
+// Escape text before printing it into a page
 function e($s)
     {
     return htmlspecialchars((string) $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
+
+// ---------- CSRF protection ----------
 function csrf_token()
     {
     if (empty($_SESSION['csrf'])) 
@@ -67,14 +87,20 @@ function csrf_check()
         die("Security check failed. Please go back, refresh the page and try again.");
     }
 }
+
+// ---------- Validation helpers ----------
+// ID names (customers, riders, admin): 3-50 characters, letters/numbers/. _ - and at least one letter
 function valid_idname($s)
     {
     return preg_match('/^(?=.*[A-Za-z])[A-Za-z0-9_.-]{3,50}$/', $s) === 1;
 }
+// Passwords: 8-72 characters (72 is the limit of the bcrypt hashing used by password_hash)
 function valid_password($s)
     {
     return strlen($s) >= 8 && strlen($s) <= 72;
 }
+
+// ---------- Login attempt limiting (5 wrong tries per ID / 20 per IP in 15 minutes) ----------
 define('DUMMY_HASH', '$2y$10$mCOqQ4y.D2o19SndlRopq.oI.8CX1zZjVuYAJW7eole3NILjY0QWC');
 function client_ip()
     {
@@ -114,6 +140,7 @@ function login_clear($conn, $scope, $ident)
     $del->execute();
     $del->close();
 }
+
 $conn = new mysqli($host, $db_user, $db_pass, $db_name);
 $conn->set_charset("utf8mb4");
 ?>
